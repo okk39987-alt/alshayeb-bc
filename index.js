@@ -1,15 +1,17 @@
 const { Client, GatewayIntentBits, PermissionsBitField } = require('discord.js');
 const http = require('http');
 
-// ✅ Keep-Alive Server (لمنع النوم على Render)
-http.createServer((req, res) => res.end('ALshayeb BC is alive!')).listen(process.env.PORT || 3000);
+// سيرفر وهمي عشان Render ما ينام البوت
+http.createServer((req, res) => {
+    res.end('Bot is alive!');
+}).listen(process.env.PORT || 3000);
 
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMembers // ضروري جداً لجلب الأعضاء
+        GatewayIntentBits.GuildMembers
     ]
 });
 
@@ -20,7 +22,6 @@ client.on('ready', () => {
 client.on('messageCreate', async message => {
     if (message.author.bot || !message.guild) return;
 
-    // استخدام الاختصار !bc للإعلان
     if (message.content.startsWith('!bc')) {
         // التحقق من صلاحيات المشرف
         if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
@@ -29,7 +30,7 @@ client.on('messageCreate', async message => {
 
         const args = message.content.split(' ').slice(1).join(' ');
         if (!args) {
-            return message.reply('❌ يرجى كتابة النص المراد إرساله بعد الأمر.\nمثال: `!bc السلام عليكم، تم افتتاخ قسم جديد!`');
+            return message.reply('❌ يرجى كتابة النص المراد إرساله بعد الأمر.\nمثال: `!bc السلام عليكم`');
         }
 
         message.reply('⏳ **جاري إرسال الإعلان لجميع أعضاء السيرفر بالخاص... يرجى الانتظار.**');
@@ -41,26 +42,25 @@ client.on('messageCreate', async message => {
             // جلب جميع الأعضاء في السيرفر
             await message.guild.members.fetch();
 
-            // إرسال الرسالة لكل عضو (باستثناء البوتات)
+            // إرسال النص الحرفي بدون أي إضافات فوقه
             for (const member of message.guild.members.cache.values()) {
                 if (member.user.bot) continue;
 
                 try {
-                    await member.send(`📢 **إعلان إداري من سيرفر ${message.guild.name}**\n\n${args}`);
+                    await member.send(args);
                     successCount++;
-                    // تأخير ثانية واحدة لتجنب حظر السبام Rate Limit
+                    // تأخير ثانية واحدة لتجنب حظر السبام
                     await new Promise(resolve => setTimeout(resolve, 1000));
                 } catch (err) {
-                    // في حال كان العضو مقفل الخاص
                     failCount++;
                 }
             }
 
-            message.channel.send(`✅ **تم الانتهاء من إرسال الإعلان!**\n- نجح الإرسال إلى: \`${successCount}\` عضو\n- فشل الإرسال إلى: \`${failCount}\` عضو (بسبب إغلاق الخاص)`);
+            message.channel.send(`✅ **تم الانتهاء من الإرسال!**\n- نجح الإرسال إلى: \`${successCount}\` عضو\n- فشل الإرسال إلى: \`${failCount}\` عضو`);
 
         } catch (error) {
             console.error('خطأ في إرسال الإعلانات:', error);
-            message.reply('❌ حدث خطأ أثناء جلب الأعضاء أو إرسال الإعلان.');
+            message.reply('❌ حدث خطأ أثناء إرسال الإعلان.');
         }
     }
 });
